@@ -38,7 +38,11 @@
 #include <string.h>
 #include <unistd.h>
 #include <resolv.h>
+# if !defined(__linux)
 #include <readpassphrase.h>
+# else
+#include "readpassphrase.h"
+# endif
 #include "atomicio.h"
 
 #define SOCKS_PORT	"1080"

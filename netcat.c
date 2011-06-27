@@ -54,6 +54,9 @@
 #include <fcntl.h>
 #include <limits.h>
 #include "atomicio.h"
+# if	defined(__linux)
+#include "bsd-str.h"
+# endif
 
 #ifndef SUN_LEN
 #define SUN_LEN(su) \
@@ -162,9 +165,11 @@ main(int argc, char *argv[])
 			if (errstr)
 				errx(1, "interval %s: %s", errstr, optarg);
 			break;
+# if defined(SO_JUMBO)
 		case 'j':
 			jflag = 1;
 			break;
+# endif
 		case 'k':
 			kflag = 1;
 			break;
@@ -192,12 +197,14 @@ main(int argc, char *argv[])
 		case 'u':
 			uflag = 1;
 			break;
+# if defined(RT_TABLEID_MAX)
 		case 'V':
 			rtableid = (unsigned int)strtonum(optarg, 0,
 			    RT_TABLEID_MAX, &errstr);
 			if (errstr)
 				errx(1, "rtable %s: %s", errstr, optarg);
 			break;
+# endif
 		case 'v':
 			vflag = 1;
 			break;
@@ -551,18 +558,22 @@ remote_connect(const char *host, const char *port, struct addrinfo hints)
 		    res0->ai_protocol)) < 0)
 			continue;
 
+# if defined(RT_TABLEID_MAX)
 		if (rtableid) {
 			if (setsockopt(s, SOL_SOCKET, SO_RTABLE, &rtableid,
 			    sizeof(rtableid)) == -1)
 				err(1, "setsockopt SO_RTABLE");
 		}
+# endif
 
 		/* Bind to a local port or source address if specified. */
 		if (sflag || pflag) {
 			struct addrinfo ahints, *ares;
+# if 	defined (SO_BINDANY)
 
 			/* try SO_BINDANY, but don't insist */
 			setsockopt(s, SOL_SOCKET, SO_BINDANY, &on, sizeof(on));
+# endif
 			memset(&ahints, 0, sizeof(struct addrinfo));
 			ahints.ai_family = res0->ai_family;
 			ahints.ai_socktype = uflag ? SOCK_DGRAM : SOCK_STREAM;
@@ -625,12 +636,18 @@ local_listen(char *host, char *port, struct addrinfo hints)
 		    res0->ai_protocol)) < 0)
 			continue;
 
+# if defined(TABLE_ID_MAX)
 		if (rtableid) {
 			if (setsockopt(s, IPPROTO_IP, SO_RTABLE, &rtableid,
 			    sizeof(rtableid)) == -1)
 				err(1, "setsockopt SO_RTABLE");
 		}
-
+# endif
+# if	defined(__linux)
+# if	!defined(SO_REUSEPORT)
+# define	SO_REUSEPORT 15
+# endif
+# endif
 		ret = setsockopt(s, SOL_SOCKET, SO_REUSEPORT, &x, sizeof(x));
 		if (ret == -1)
 			err(1, NULL);
@@ -841,21 +858,25 @@ set_common_sockopts(int s)
 {
 	int x = 1;
 
+# if defined(TCP_MD5SIG)
 	if (Sflag) {
 		if (setsockopt(s, IPPROTO_TCP, TCP_MD5SIG,
 			&x, sizeof(x)) == -1)
 			err(1, NULL);
 	}
+# endif
 	if (Dflag) {
 		if (setsockopt(s, SOL_SOCKET, SO_DEBUG,
 			&x, sizeof(x)) == -1)
 			err(1, NULL);
 	}
+# if defined(SO_JUMBO)
 	if (jflag) {
 		if (setsockopt(s, SOL_SOCKET, SO_JUMBO,
 			&x, sizeof(x)) == -1)
 			err(1, NULL);
 	}
+# endif
 	if (Tflag != -1) {
 		if (setsockopt(s, IPPROTO_IP, IP_TOS,
 		    &Tflag, sizeof(Tflag)) == -1)
