@@ -1,0 +1,1 @@
+This project is a Linux(and others OS) port of the OpenBSD rewrite of netcat, including support for IPv6, proxies, and Unix sockets.
