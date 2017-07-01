@@ -25,5 +25,9 @@ nc: $(OBJS)
 $(OBJS): %.o: %.c
 	$(CC) $(CFLAGS) $(INC) -c $< -o $@
 
+install :
+	cp nc /usr/local/bin
+	cp nc.1 /usr/local/share/man/man1
+
 clean:
 	rm -f $(OBJS) nc
